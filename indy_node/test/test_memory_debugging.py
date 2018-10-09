@@ -10,8 +10,9 @@ from plenum.common.constants import STEWARD_STRING
 from plenum.common.util import randomString
 from plenum.common.messages.node_messages import Commit
 
-from plenum.server.node import Node, get_size, get_max
-from plenum.test.pool_transactions.helper import sdk_add_new_nym, prepare_nym_request
+from plenum.server.node import Node
+from plenum.test.pool_transactions.helper import sdk_add_new_nym, prepare_nym_request, \
+    sdk_sign_and_send_prepared_request
 from plenum.test.helper import sdk_json_to_request_object
 
 
@@ -37,6 +38,66 @@ def dont_send_commit_to(nodes, ignore_node_name):
 def reset_sending(nodes):
     for node in nodes:
         node.send = types.MethodType(Node.send, node)
+
+
+def sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, creators_wallet,
+                                    alias=None, role=None, seed=None,
+                                    dest=None, verkey=None, skipverkey=False):
+    seed = seed or randomString(32)
+    alias = alias or randomString(5)
+    wh, _ = creators_wallet
+
+    # filling nym request and getting steward did
+    # if role == None, we are adding client
+    nym_request, new_did = looper.loop.run_until_complete(
+        prepare_nym_request(creators_wallet, seed,
+                            alias, role, dest, verkey, skipverkey))
+
+    # sending request using 'sdk_' functions
+    request_couple = sdk_sign_and_send_prepared_request(looper, creators_wallet,
+                                                        sdk_pool_handle, nym_request)
+
+    return wh, new_did
+
+
+def get_max(obj, seen=None, now_depth=0, path=str()):
+    """Recursively finds size of objects"""
+    if now_depth > 10:
+        return {}
+    dictionary = {(path, type(obj)): sys.getsizeof(obj)}
+    path += str(type(obj)) + ' ---> '
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return {}
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        vpath = path + 'value ---> '
+        for d in [get_max(v, seen, now_depth + 1, vpath) for v in obj.values()]:
+            updater(dictionary, d)
+        kpath = path + 'key ---> '
+        for d in [get_max(k, seen, now_depth + 1, kpath) for k in obj.keys()]:
+            updater(dictionary, d)
+    elif hasattr(obj, '__dict__'):
+        dpath = path + '__dict__ ---> '
+        d = get_max(obj.__dict__, seen, now_depth + 1, dpath)
+        updater(dictionary, d)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        ipath = path + '__iter__ ---> '
+        for d in [get_max(i, seen, now_depth + 1, ipath) for i in obj]:
+            updater(dictionary, d)
+    return dictionary
+
+
+def updater(store_d, new_d):
+    for k in new_d.keys():
+        if k in store_d:
+            store_d[k] += int(new_d[k])
+        else:
+            store_d[k] = new_d[k]
 
 
 def test_memory_debugging(looper,
@@ -66,7 +127,7 @@ def test_memory_debugging(looper,
 
     # Sending requests until nodes generate `unordered_requests_count` 3pc batches
     while primary.master_replica.lastPrePrepareSeqNo < unordered_requests_count:
-        sdk_add_new_nym(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
+        sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
 
     memory_data['After {} unordered'.format(unordered_requests_count)] = get_max(primary)
 
@@ -97,7 +158,7 @@ def test_memory_debugging(looper,
     dont_send_commit_to(set3, nodeSet[2].name)
 
     while primary.master_replica.lastPrePrepareSeqNo < unordered_requests_count * 2:
-        sdk_add_new_nym(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
+        sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
 
     memory_data['After {} unordered again'.format(unordered_requests_count)] = get_max(primary)
 
