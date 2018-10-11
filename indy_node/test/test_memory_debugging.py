@@ -105,7 +105,7 @@ def test_memory_debugging(looper,
                           sdk_wallet_trust_anchor,
                           sdk_pool_handle):
     # Settings
-    unordered_requests_count = 10
+    unordered_requests_count = 200
     file_name = 'memory_data.txt'
 
     # Sets for emulating commits problems
@@ -162,6 +162,11 @@ def test_memory_debugging(looper,
 
     memory_data['After {} unordered again'.format(unordered_requests_count)] = get_max(primary)
 
+    # Remove commit problems
+    reset_sending(set1)
+    reset_sending(set2)
+    reset_sending(set3)
+
     for i in range(primary.master_replica.last_ordered_3pc[1], primary.master_replica.lastPrePrepareSeqNo):
         primary.replicas._replicas.values()[0]._request_commit((0, i))
     for i in range(primary.replicas._replicas.values()[1].last_ordered_3pc[1],
@@ -175,8 +180,6 @@ def test_memory_debugging(looper,
     primary.replicas._replicas.values()[1]._gc(primary.replicas._replicas.values()[1].last_ordered_3pc)
 
     memory_data['After _gc called again'] = get_max(primary)
-
-    assert len(memory_data) == 7
 
     file = open(file_name, 'w')
     for k, v in memory_data.items():
