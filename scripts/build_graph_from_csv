@@ -103,9 +103,10 @@ def build_graph():
                      items=["avg_node_stack_messages_processed",
                             "avg_client_stack_messages_processed"]),
             PlotInfo(title="Traffic", log_scale=True,
-                     items=[
-                            "max_memory_requests_items",
-                            ]),
+                     items=["incoming_node_message_size_per_sec",
+                            "outgoing_node_message_size_per_sec",
+                            "incoming_client_message_size_per_sec",
+                            "outgoing_client_message_size_per_sec"]),
             PlotInfo(title="Request queues", log_scale=False,
                      items=["avg_request_queue_size",
                             "avg_finalised_request_queue_size",

@@ -6,8 +6,6 @@ from typing import Any
 
 import sys
 
-from plenum.common.perf_util import get_memory_usage
-
 from plenum.common.constants import STEWARD_STRING
 from plenum.common.util import randomString
 from plenum.common.messages.node_messages import Commit
@@ -64,7 +62,7 @@ def sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, creators_wallet,
 
 def get_max(obj, seen=None, now_depth=0, path=str()):
     """Recursively finds size of objects"""
-    if now_depth > 5:
+    if now_depth > 10:
         return {}
     dictionary = {(path, type(obj)): sys.getsizeof(obj)}
     path += str(type(obj)) + ' ---> '
@@ -107,7 +105,7 @@ def test_memory_debugging(looper,
                           sdk_wallet_trust_anchor,
                           sdk_pool_handle):
     # Settings
-    unordered_requests_count = 80
+    unordered_requests_count = 200
     file_name = 'memory_data.txt'
 
     # Sets for emulating commits problems
@@ -118,25 +116,83 @@ def test_memory_debugging(looper,
     set3 = list(nodeSet)
     set3.remove(nodeSet[2])
     primary = nodeSet[0]
-    # memory_data = OrderedDict()
-    pypmpler = []
 
-    pypmpler.append(get_memory_usage(primary, True, get_only_non_empty=True))
+    memory_data = OrderedDict()
+    memory_data['After starting'] = get_max(primary)
 
+    # Emulate commit sending problems
+    dont_send_commit_to(set1, nodeSet[0].name)
+    dont_send_commit_to(set2, nodeSet[1].name)
+    dont_send_commit_to(set3, nodeSet[2].name)
+
+    # Sending requests until nodes generate `unordered_requests_count` 3pc batches
     while primary.master_replica.lastPrePrepareSeqNo < unordered_requests_count:
-        sdk_add_new_nym(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
+        sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
 
-    pypmpler.append(get_memory_usage(primary, True, get_only_non_empty=True))
+    memory_data['After {} unordered'.format(unordered_requests_count)] = get_max(primary)
 
+    # Remove commit problems
+    reset_sending(set1)
+    reset_sending(set2)
+    reset_sending(set3)
 
+    # primary ask for commits
+    for i in range(primary.master_replica.last_ordered_3pc[1], primary.master_replica.lastPrePrepareSeqNo):
+        primary.replicas._replicas.values()[0]._request_commit((0, i))
+    for i in range(primary.replicas._replicas.values()[1].last_ordered_3pc[1],
+                   primary.replicas._replicas.values()[1].lastPrePrepareSeqNo):
+        primary.replicas._replicas.values()[1]._request_commit((0, i))
+    looper.runFor(5)
+
+    memory_data['After {} ordered'.format(unordered_requests_count)] = get_max(primary)
+
+    # primary clear queues
+    primary.replicas._replicas.values()[0]._gc(primary.replicas._replicas.values()[0].last_ordered_3pc)
+    primary.replicas._replicas.values()[1]._gc(primary.replicas._replicas.values()[1].last_ordered_3pc)
+
+    memory_data['After _gc called'] = get_max(primary)
+
+    # Emulate problems again
+    dont_send_commit_to(set1, nodeSet[0].name)
+    dont_send_commit_to(set2, nodeSet[1].name)
+    dont_send_commit_to(set3, nodeSet[2].name)
+
+    while primary.master_replica.lastPrePrepareSeqNo < unordered_requests_count * 2:
+        sdk_add_new_nym_without_waiting(looper, sdk_pool_handle, sdk_wallet_trust_anchor)
+
+    memory_data['After {} unordered again'.format(unordered_requests_count)] = get_max(primary)
+
+    # Remove commit problems
+    reset_sending(set1)
+    reset_sending(set2)
+    reset_sending(set3)
+
+    for i in range(primary.master_replica.last_ordered_3pc[1], primary.master_replica.lastPrePrepareSeqNo):
+        primary.replicas._replicas.values()[0]._request_commit((0, i))
+    for i in range(primary.replicas._replicas.values()[1].last_ordered_3pc[1],
+                   primary.replicas._replicas.values()[1].lastPrePrepareSeqNo):
+        primary.replicas._replicas.values()[1]._request_commit((0, i))
+    looper.runFor(5)
+
+    memory_data['After {} ordered again'.format(unordered_requests_count)] = get_max(primary)
+
+    primary.replicas._replicas.values()[0]._gc(primary.replicas._replicas.values()[0].last_ordered_3pc)
+    primary.replicas._replicas.values()[1]._gc(primary.replicas._replicas.values()[1].last_ordered_3pc)
+
+    memory_data['After _gc called again'] = get_max(primary)
 
     file = open(file_name, 'w')
-    for p in pypmpler:
-        file.write('\n\n')
-        file.write(str(p[0]) + '  ;   ')
-        p[1].sort(key=lambda elem: elem[-1], reverse=True)
-        file.write(str(p[1]))
-    file.close()
+    for k, v in memory_data.items():
+        file.write(k)
+        file.write('\n')
+        file.write(str(sum(v.values()) / 1024 / 1024) + ' mbs')
+        file.write('\n')
+        # Sort by value
+        for k, v in sorted(v.items(), key=itemgetter(1), reverse=True):
+            file.write(str(v / 1024 / 1024) + ' mbs       ')
+            file.write(str(k))
+            file.write('\n')
+        file.write('\n\n\n')
 
 
 def test_requests_collection_debugging(looper,
