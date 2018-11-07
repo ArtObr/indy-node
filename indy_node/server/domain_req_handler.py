@@ -226,6 +226,12 @@ class DomainReqHandler(PHandler):
                 req.identifier, req.reqId, reason)
 
     def _validateAttrib(self, req: Request):
+
+        # If dest is absent or empty we must replace it
+        # with identifier of sender
+        if 'dest' not in req.operation or not req.operation['dest']:
+            req.operation['dest'] = req.identifier
+
         origin = req.identifier
         op = req.operation
 

@@ -37,3 +37,20 @@ def test_attrib_enc_reply_is_valid(looper, sdk_pool_handle, sdk_wallet_steward):
     validate_write_reply(reply)
     validate_attrib_txn(reply['result']['txn'])
     assert reply['result']['txn']['data']['enc'] == enc
+
+
+def test_attrib_without_dest(looper, sdk_pool_handle, sdk_wallet_steward):
+    xhash = sha256("Hello, world without dest".encode()).hexdigest()
+
+    _, identifier = sdk_wallet_steward
+    request = looper.loop.run_until_complete(build_attrib_request(identifier, identifier, xhash, None, None))
+
+    j_request = json.loads(request)
+    del j_request['operation']['dest']
+    request = json.dumps(j_request)
+
+    reply = sdk_get_reply(looper, sdk_sign_and_submit_req(sdk_pool_handle, sdk_wallet_steward, request))[1]
+
+    validate_write_reply(reply)
+    validate_attrib_txn(reply['result']['txn'])
+    assert reply['result']['txn']['data']['hash'] == xhash
