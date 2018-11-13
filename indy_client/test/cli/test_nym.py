@@ -38,7 +38,7 @@ def test_pool_nodes_started(nodeSet):
 
 
 def test_send_same_nyms_only_first_gets_written(
-        looper, do, sdk_pool_handle, sdk_wallet_steward):
+        looper, sdk_pool_handle, sdk_wallet_steward):
     wh, _ = sdk_wallet_steward
     seed = randomString(32)
     did, verkey = looper.loop.run_until_complete(
@@ -127,13 +127,4 @@ def verkey_removed_from_existing_did(looper, sdk_pool_handle, sdk_wallet_steward
 
 
 def test_remove_verkey_from_did(verkey_removed_from_existing_did):
-    pass
-
-
-@pytest.mark.skip(
-    reason="SOV-568. Obsolete assumption, if an identity has set "
-           "its verkey to blank, no-one including "
-           "itself can change it")
-def testNewverkey_added_to_nym(be, do, philCli, abbrevIdr,
-                               verkeyRemovedFromExistingDID):
     pass
