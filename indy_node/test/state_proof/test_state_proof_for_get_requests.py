@@ -11,7 +11,7 @@ from indy_common.constants import GET_ATTR, GET_NYM, SCHEMA, GET_SCHEMA, \
 from indy_common.serialization import attrib_raw_data_serializer
 
 # Fixtures, do not remove
-from indy_node.test.attrib_txn.test_nym_attrib import \
+from indy_node.test.attrib_txn.test_attrib import \
     sdk_added_raw_attribute, attributeName, attributeValue, attributeData
 
 

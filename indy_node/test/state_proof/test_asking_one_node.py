@@ -3,7 +3,7 @@ from plenum.common.constants import TARGET_NYM, TXN_TYPE, RAW
 from indy_common.constants import GET_ATTR
 
 # fixtures
-from indy_node.test.attrib_txn.test_nym_attrib import attributeData, \
+from indy_node.test.attrib_txn.test_attrib import attributeData, \
     attributeName, attributeValue, sdk_added_raw_attribute
 
 

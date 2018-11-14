@@ -7,7 +7,7 @@ from indy_common.constants import GET_ATTR, GET_NYM, GET_SCHEMA, GET_CLAIM_DEF, 
     CLAIM_DEF_SIGNATURE_TYPE, SCHEMA_NAME, SCHEMA_VERSION, SCHEMA_ATTR_NAMES
 
 # fixtures, do not remove
-from indy_node.test.attrib_txn.test_nym_attrib import \
+from indy_node.test.attrib_txn.test_attrib import \
     sdk_added_raw_attribute, attributeName, attributeValue, attributeData
 
 
