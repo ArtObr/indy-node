@@ -23,8 +23,8 @@ def db_manager(tconf, tdir):
                                              tdir,
                                              tconf.idrCacheDbName,
                                              db_config=tconf.db_idr_cache_db_config))
-    db_manager.register_new_store('idr', idr_cache)
-    db_manager.register_new_database(DOMAIN_LEDGER_ID, get_fake_ledger(), State())
+    db_manager.register_store('idr', idr_cache)
+    db_manager.register_database(DOMAIN_LEDGER_ID, get_fake_ledger(), State())
     return db_manager
 
 
