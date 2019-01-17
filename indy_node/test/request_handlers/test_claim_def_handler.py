@@ -41,7 +41,7 @@ def test_claim_def_dynamic_validation_for_new_claim_def(claim_def_request, schem
                                                         claim_def_handler: ClaimDefHandler):
     schema = reqToTxn(schema_request)
     claim_def_request.operation[REF] = get_seq_no(schema)
-    claim_def_handler.ledger.appendTxns([schema])
+    claim_def_handler.ledger.append_txn(schema)
     claim_def_handler.dynamic_validation(claim_def_request)
 
 
@@ -50,7 +50,7 @@ def test_claim_def_dynamic_validation_without_permission(claim_def_request, sche
     claim_def_handler.write_request_validator.validate = get_exception(True)
     schema = reqToTxn(schema_request)
     claim_def_request.operation[REF] = get_seq_no(schema)
-    claim_def_handler.ledger.appendTxns([schema])
+    claim_def_handler.ledger.append_txn(schema)
 
     test_identifier = randomString()
     idr = claim_def_handler.database_manager.idr_cache
@@ -69,7 +69,7 @@ def test_claim_def_dynamic_validation_for_unknown_identifier(claim_def_request, 
     test_identifier = randomString()
     schema = reqToTxn(schema_request)
     claim_def_request.operation[REF] = get_seq_no(schema)
-    claim_def_handler.ledger.appendTxns([schema])
+    claim_def_handler.ledger.append_txn(schema)
     request = Request(identifier=test_identifier,
                       reqId=claim_def_request.reqId,
                       operation=claim_def_request.operation)
@@ -89,7 +89,7 @@ def test_claim_def_dynamic_validation_without_ref_to_not_schema(claim_def_reques
                                                                 claim_def_handler: ClaimDefHandler, creator):
     nym = reqToTxn(Request(identifier=creator, operation={'type': NYM}))
     claim_def_request.operation[REF] = get_seq_no(nym)
-    claim_def_handler.ledger.appendTxns([nym])
+    claim_def_handler.ledger.append_txn(nym)
     with pytest.raises(InvalidClientRequest) as e:
         claim_def_handler.dynamic_validation(claim_def_request)
     assert "Mentioned seqNo ({}) isn't seqNo of the schema.".format(claim_def_request.operation[REF]) \

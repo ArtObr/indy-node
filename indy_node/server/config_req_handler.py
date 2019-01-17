@@ -135,9 +135,9 @@ class ConfigReqHandler(LedgerRequestHandler):
     def apply(self, req: Request, cons_time):
         txn = append_txn_metadata(reqToTxn(req),
                                   txn_time=cons_time)
-        self.ledger.append_txns_metadata([txn])
-        (start, _), _ = self.ledger.appendTxns([txn])
-        return start, txn
+        self.ledger.append_metadata(txn)
+        seq_no, _ = self.ledger.append_txn(txn)
+        return seq_no, txn
 
     def commit(self, txnCount, stateRoot, txnRoot, ppTime) -> List:
         committedTxns = super().commit(txnCount, stateRoot, txnRoot, ppTime)

@@ -21,8 +21,7 @@ def get_fake_ledger():
     ledger = FakeSomething()
     ledger.txn_list = {}
     ledger.getBySeqNo = lambda seq_no: ledger.txn_list[seq_no]
-    ledger.appendTxns = lambda txns: ledger.txn_list.update({get_seq_no(txn): txn
-                                                             for txn in txns})
+    ledger.append_txn = lambda txn: ledger.txn_list.update({get_seq_no(txn): txn})
     return ledger
 
 
